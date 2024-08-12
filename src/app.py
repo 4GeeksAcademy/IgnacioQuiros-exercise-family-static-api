@@ -26,17 +26,57 @@ def sitemap():
     return generate_sitemap(app)
 
 @app.route('/members', methods=['GET'])
-def handle_hello():
-
-    # this is how you can use the Family datastructure by calling its methods
+def handle_get():
     members = jackson_family.get_all_members()
-    response_body = {
-        "hello": "world",
-        "family": members
-    }
-
-
+    response_body = members
     return jsonify(response_body), 200
+
+@app.route('/member/<int:id>', methods=['GET'])
+def handle_get_single(id):
+    member = jackson_family.get_member(id)
+    if member:
+        return jsonify(member), 200
+    else:
+        return jsonify({'error': f'No member found with id: {id}'}), 200
+
+
+@app.route('/member', methods=['POST'])
+def handle_add_member():
+    body = request.get_json(silent=True)
+    
+    if body is None:
+        return jsonify({'msg': 'You must send information in the Body'}), 400
+    if 'first_name' not in body:
+        return jsonify({'msg': 'You must send first_name field'}), 400
+    if 'age' not in body:
+        return jsonify({'msg': 'You must send age field'}), 400
+    if 'lucky_numbers' not in body:
+        return jsonify({'msg': 'You must send lucky_numbers field'}), 400
+
+    if 'id' in body and body['id'] is not None:
+        new_id = body['id']
+    else:
+        new_id = jackson_family._generateId()
+
+    new_member = {
+        'id': new_id,
+        'first_name': body['first_name'],  
+        'age': body['age'],
+        'lucky_numbers': body['lucky_numbers']
+    }
+    
+    all_members = jackson_family.add_member(new_member)
+    return jsonify({'msg': 'ok', 'members': all_members}), 200
+
+
+@app.route('/member/<int:id>', methods=['DELETE'])
+def handle_delete_member(id):
+    try:
+        jackson_family.delete_member(id)
+        return jsonify({'done':True}), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
